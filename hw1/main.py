@@ -1,5 +1,11 @@
+import numpy as np
+import pandas as pd
+from scipy.sparse import csr_matrix
+
 MAXIMUM_BYTES = 4  # the maximum number of bytes that we want to use to represent an integer
 maximum_bits = 2 ** (MAXIMUM_BYTES * 8) - 1  # the number of bits used to represent an integer
+
+convert_back_to_string = {}
 
 
 def simple_hash(string_to_hash):
@@ -10,10 +16,12 @@ def simple_hash(string_to_hash):
     :return: a hash value of the string that can be represented with 4 bytes
     """
     hashed_string = hash(string_to_hash.lower())
-    return hashed_string % maximum_bits
+    res = hashed_string % maximum_bits
+    convert_back_to_string[res] = string_to_hash
+    return res
 
 
-def k_shingle(doc, k):
+def k_shingle(doc, k=9):
     """
     Represents a document in the form of a set of its hashed k-shingles.
     :param doc: a document to be shingled
@@ -36,7 +44,86 @@ def compare_sets(set1, set2):
     return round(len(set1.intersection(set2)) / len(set1.union(set2)), 3)
 
 
-räven = k_shingle('räven raskar över isen', 3)
-apan = k_shingle('apan raskar över isen', 3)
+def hashing_f(x, a, b, p):
+    return (a * x + b) % p
 
-print(compare_sets(räven, apan))
+
+def min_hash(characteristic_matrix, n, a, b, p):
+    """
+    Calculates the min hash signature matrix using the characteristics matrix of the documents
+    :param characteristic_matrix: a matrix with row values in first column, and boolean entries in every cell that
+            indicate if a document contains a specific shingle or not
+    :param n: number of hashing functions
+    :param a: list of random parameters for the first parameter to be used in the universal hashing function
+    :param b: list of random parameters for the second parameter to be used in the universal hashing function
+    :param p: a prime number to be used in the universal hashing function
+    :return:
+    """
+
+    for row in characteristic_matrix:
+        print(convert_back_to_string[row[0]], row[1], row[2])
+
+    signature_matrix = np.full((n, len(characteristic_matrix[0]) - 1), np.inf)
+
+    for row in characteristic_matrix:
+        row_value = row[0]
+
+        row_hashes = []
+        for i in range(n):
+            row_hashes.append(hashing_f(row_value, a[i], b[i], p))
+
+        for c in range(1, len(row)):
+            if row[c] == 0:
+                continue  # this is equal to "do nothing" -> just continue the loop
+            else:
+                for i in range(n):
+                    signature_matrix[i][c - 1] = min(signature_matrix[i][c - 1], row_hashes[i])
+
+    return signature_matrix
+
+
+def main():
+    SHINGLE_SIZE = 2
+    NUMBER_OF_HASHING_FUNCTIONS = 3
+    a = [1, 3, 4]
+    b = [1, 1, 5]
+    p = 5
+
+    documents_raw = ['räven', 'näven']
+    document_shingles = []
+
+    union_shingles = set()
+    for document in documents_raw:
+        doc_shingles = k_shingle(document, SHINGLE_SIZE)
+        document_shingles.append(sorted(doc_shingles))
+        union_shingles.update(doc_shingles)
+
+    union_shingles = sorted(union_shingles)
+
+    # implementation from https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.csr_matrix.html
+    indptr = [0]
+    indices = []
+    data = []
+    shingles = []
+
+    for idx, shingle in enumerate(union_shingles):
+        indices.append(idx)
+        data.append(shingle)
+    indptr.append(len(indices))
+
+    for d in document_shingles:
+        for shingle in d:
+            index = union_shingles.index(shingle)
+            indices.append(index)
+            data.append(1)
+            if shingle not in shingles:
+                shingles.append(shingle)
+        indptr.append(len(indices))
+
+    characteristic_matrix = csr_matrix((data, indices, indptr), dtype=int).toarray().transpose()
+
+    min_hash(characteristic_matrix, NUMBER_OF_HASHING_FUNCTIONS, a, b, p)
+
+
+if __name__ == '__main__':
+    main()
