@@ -41,11 +41,12 @@ def compare_sets(set1, set2):
     :param set2: another set of integers
     :return: the Jaccard Similarity of the two sets
     """
+    set1, set2 = set(set1), set(set2)
     return round(len(set1.intersection(set2)) / len(set1.union(set2)), 3)
 
 
 def hashing_f(x, a, b, p):
-    return (a * x + b) % p
+    return ((a * x + b) % p) % maximum_bits
 
 
 def min_hash(characteristic_matrix, n, a, b, p):
@@ -82,14 +83,26 @@ def min_hash(characteristic_matrix, n, a, b, p):
     return signature_matrix
 
 
+def compare_signatures(signature_matrix, doc_idx1, doc_idx2):
+    """
+    Estimates the similarity of two minhash signatures as a fraction of components in which they agree.
+    :param signature_matrix:
+    :param doc_idx1:
+    :param doc_idx2:
+    :return:
+    """
+    # Note: [:, idx] is numpy syntax for selecting a specific column in a 2D-array
+    return np.mean(signature_matrix[:, doc_idx1] == signature_matrix[:, doc_idx2])
+
+
 def main():
     SHINGLE_SIZE = 2
-    NUMBER_OF_HASHING_FUNCTIONS = 3
-    a = [1, 3, 4]
-    b = [1, 1, 5]
-    p = 5
+    NUMBER_OF_HASHING_FUNCTIONS = 100
+    p = 4294967311  # the first prime number after 2^32 - 1.
+    a = [np.random.randint(1, p//2) for _ in range(NUMBER_OF_HASHING_FUNCTIONS)]
+    b = [np.random.randint(0, p) for _ in range(NUMBER_OF_HASHING_FUNCTIONS)]
 
-    documents_raw = ['räven', 'näven']
+    documents_raw = ['rävenraskaröverisen', 'nävenraskaröverisen', 'random']
     document_shingles = []
 
     union_shingles = set()
@@ -122,7 +135,14 @@ def main():
 
     characteristic_matrix = csr_matrix((data, indices, indptr), dtype=int).toarray().transpose()
 
-    min_hash(characteristic_matrix, NUMBER_OF_HASHING_FUNCTIONS, a, b, p)
+    signature_matrix = min_hash(characteristic_matrix, NUMBER_OF_HASHING_FUNCTIONS, a, b, p)
+
+    print('True similarity:', compare_sets(document_shingles[0], document_shingles[1]), 'Estimation:',
+          compare_signatures(signature_matrix, 0, 1))
+    print('True similarity:', compare_sets(document_shingles[0], document_shingles[2]), 'Estimation:',
+          compare_signatures(signature_matrix, 0, 2))
+    print('True similarity:', compare_sets(document_shingles[1], document_shingles[2]), 'Estimation:',
+          compare_signatures(signature_matrix, 1, 2))
 
 
 if __name__ == '__main__':
