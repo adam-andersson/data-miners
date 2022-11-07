@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from scipy.sparse import csr_matrix
+import glob
 
 MAXIMUM_BYTES = 4  # the maximum number of bytes that we want to use to represent an integer
 maximum_bits = 2 ** (MAXIMUM_BYTES * 8) - 1  # the number of bits used to represent an integer
@@ -60,13 +61,9 @@ def min_hash(characteristic_matrix, n, a, b, p):
     :param p: a prime number to be used in the universal hashing function
     :return:
     """
-
-    for row in characteristic_matrix:
-        print(convert_back_to_string[row[0]], row[1], row[2])
-
     signature_matrix = np.full((n, len(characteristic_matrix[0]) - 1), np.inf)
 
-    for row in characteristic_matrix:
+    for idx, row in enumerate(characteristic_matrix):
         row_value = row[0]
 
         row_hashes = []
@@ -79,7 +76,6 @@ def min_hash(characteristic_matrix, n, a, b, p):
             else:
                 for i in range(n):
                     signature_matrix[i][c - 1] = min(signature_matrix[i][c - 1], row_hashes[i])
-
     return signature_matrix
 
 
@@ -92,17 +88,30 @@ def compare_signatures(signature_matrix, doc_idx1, doc_idx2):
     :return:
     """
     # Note: [:, idx] is numpy syntax for selecting a specific column in a 2D-array
-    return np.mean(signature_matrix[:, doc_idx1] == signature_matrix[:, doc_idx2])
+    return np.around(np.mean(signature_matrix[:, doc_idx1] == signature_matrix[:, doc_idx2]), 3)
 
 
 def main():
-    SHINGLE_SIZE = 2
-    NUMBER_OF_HASHING_FUNCTIONS = 100
+    SHINGLE_SIZE = 9
+    NUMBER_OF_HASHING_FUNCTIONS = 111
     p = 4294967311  # the first prime number after 2^32 - 1.
     a = [np.random.randint(1, p//2) for _ in range(NUMBER_OF_HASHING_FUNCTIONS)]
     b = [np.random.randint(0, p) for _ in range(NUMBER_OF_HASHING_FUNCTIONS)]
 
-    documents_raw = ['rävenraskaröverisen', 'nävenraskaröverisen', 'random']
+    document_paths = glob.glob("**/*.txt", recursive=True)
+
+    documents_raw = []
+    for doc_path in document_paths:
+        try:
+            with open(doc_path) as f:
+                documents_raw.append(f.read())
+        except UnicodeDecodeError:
+            print(f'File with path {doc_path} could not be decoded correctly. Skipping...')
+
+    print(f'--- Finished reading {len(documents_raw)} files ---')
+
+    print(documents_raw)
+
     document_shingles = []
 
     union_shingles = set()
@@ -113,11 +122,12 @@ def main():
 
     union_shingles = sorted(union_shingles)
 
+    print(f'--- Finished creating all shingles of length {SHINGLE_SIZE} ---')
+
     # implementation from https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.csr_matrix.html
     indptr = [0]
     indices = []
     data = []
-    shingles = []
 
     for idx, shingle in enumerate(union_shingles):
         indices.append(idx)
@@ -129,16 +139,18 @@ def main():
             index = union_shingles.index(shingle)
             indices.append(index)
             data.append(1)
-            if shingle not in shingles:
-                shingles.append(shingle)
         indptr.append(len(indices))
 
     characteristic_matrix = csr_matrix((data, indices, indptr), dtype=int).toarray().transpose()
 
+    print(f'--- Finished creating the characteristic matrix ---')
+
     signature_matrix = min_hash(characteristic_matrix, NUMBER_OF_HASHING_FUNCTIONS, a, b, p)
 
-    print('True similarity:', compare_sets(document_shingles[0], document_shingles[1]), 'Estimation:',
-          compare_signatures(signature_matrix, 0, 1))
+    print(f'--- Finished creating the signature matrix ---')
+
+    print('True similarity:', compare_sets(document_shingles[0], document_shingles[4]), 'Estimation:',
+          compare_signatures(signature_matrix, 0, 4))
     print('True similarity:', compare_sets(document_shingles[0], document_shingles[2]), 'Estimation:',
           compare_signatures(signature_matrix, 0, 2))
     print('True similarity:', compare_sets(document_shingles[1], document_shingles[2]), 'Estimation:',
