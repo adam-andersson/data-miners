@@ -9,8 +9,7 @@ import time
 MAXIMUM_BYTES = 4  # the maximum number of bytes that we want to use to represent an integer
 maximum_bits = 2 ** (MAXIMUM_BYTES * 8) - 1  # the number of bits used to represent an integer
 
-convert_back_to_string = {} # key: integer from hashed string, value: string
-
+convert_back_to_string = {}  # key: integer from hashed string, value: string
 
 
 def simple_hash(string_to_hash):
@@ -51,7 +50,6 @@ def compare_sets(set1, set2):
 
 
 def hashing_f(x, a, b, p):
-
     return ((a * x + b) % p) % maximum_bits
 
 
@@ -67,7 +65,7 @@ def min_hash(characteristic_matrix, n, a, b, p):
     :return:
     """
 
-    #for row in characteristic_matrix:
+    # for row in characteristic_matrix:
     #    print(convert_back_to_string[row[0]], row[1], row[2])
 
     signature_matrix = np.full((n, len(characteristic_matrix[0]) - 1), np.inf)
@@ -77,9 +75,9 @@ def min_hash(characteristic_matrix, n, a, b, p):
 
         row_hashes = []
         for i in range(n):
-            row_hashes.append(hashing_f(row_value, a[i], b[i], p)) # store hashed values for every hash function
-                                                                   # with some shingle as input, to be used in next
-                                                                   # for-loop when a one is encountered in a row/col.
+            row_hashes.append(hashing_f(row_value, a[i], b[i], p))  # store hashed values for every hash function
+            # with some shingle as input, to be used in next
+            # for-loop when a one is encountered in a row/col.
 
         for c in range(1, len(row)):
             if row[c] == 0:
@@ -100,30 +98,30 @@ def LSH(signature_matrix, a, b, p, t=0.8, bands=20):
     :param p: a prime number to be used in the universal hashing function
     :param bands: determines the number of sub-matrices that the signature matrix will be divided into
     :param t: threshold of similar components for candidate pairs
-    :return: pairs with atleast t similar components
+    :return: pairs with at least t similar components
     """
 
     r = int(signature_matrix.shape[0] / bands)
     cols = np.array([x for x in range(signature_matrix.shape[1])])
     candidate_pairs = []
 
-    for row in range(0, signature_matrix.shape[0], r): # iterating over bands
+    for row in range(0, signature_matrix.shape[0], r):  # iterating over bands
 
-        band = np.sum(signature_matrix[row:row+r, cols], axis=0) # sum each column into a single value
+        band = np.sum(signature_matrix[row:row + r, cols], axis=0)  # sum each column into a single value
         buckets = list(map(lambda x: hashing_f(x, a, b, p), band))
         unique_vals = np.unique(buckets)
 
         for val in unique_vals:
-            pairs = np.where(buckets == val)[0] # find docs in same bucket
-            if len(pairs) < 2: # no candidate pair found
+            pairs = np.where(buckets == val)[0]  # find docs in same bucket
+            if len(pairs) < 2:  # no candidate pair found
                 continue
 
-            candidate_pairs += list(itertools.combinations(cols[pairs], 2)) # store candidate pairs
+            candidate_pairs += list(itertools.combinations(cols[pairs], 2))  # store candidate pairs
 
-    candidate_pairs = set(candidate_pairs) # Filter on unique pairs found
+    candidate_pairs = set(candidate_pairs)  # Filter on unique pairs found
     similar_pairs = []
 
-    for pair in candidate_pairs:    # Look for pairs with t similar components
+    for pair in candidate_pairs:  # Look for pairs with t similar components
         if compare_signatures(signature_matrix, pair[0], pair[1]) >= t:
             similar_pairs.append(pair)
 
@@ -142,21 +140,19 @@ def compare_signatures(signature_matrix, doc_idx1, doc_idx2):
     return np.mean(signature_matrix[:, doc_idx1] == signature_matrix[:, doc_idx2])
 
 
-def implementation(document_subset, a, b, NUMBER_OF_HASHING_FUNCTIONS, p):
-
-    SHINGLE_SIZE = 2
-
+def implementation(document_subset, shingle_size, a, b, NUMBER_OF_HASHING_FUNCTIONS, p):
     document_shingles = []  # list of lists with hashed shingles for every document
     union_shingles = set()
+
     for document in document_subset:
-        doc_shingles = k_shingle(document, SHINGLE_SIZE)  # Hashed shingles for a document
+        doc_shingles = k_shingle(document, shingle_size)  # Hashed shingles for a document
         document_shingles.append(sorted(doc_shingles))
         union_shingles.update(doc_shingles)
 
     union_shingles = sorted(union_shingles)
 
     # implementation from https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.csr_matrix.html
-    indptr = [0]
+    index_pointers = [0]
     indices = []
     data = []
     shingles = []
@@ -164,7 +160,7 @@ def implementation(document_subset, a, b, NUMBER_OF_HASHING_FUNCTIONS, p):
     for idx, shingle in enumerate(union_shingles):
         indices.append(idx)
         data.append(shingle)
-    indptr.append(len(indices))
+    index_pointers.append(len(indices))
 
     for d in document_shingles:
         for shingle in d:
@@ -173,13 +169,13 @@ def implementation(document_subset, a, b, NUMBER_OF_HASHING_FUNCTIONS, p):
             data.append(1)
             if shingle not in shingles:
                 shingles.append(shingle)
-        indptr.append(len(indices))
+        index_pointers.append(len(indices))
 
     # DATA: [ Hashed shingles, as many ones as shingles (?) ]
     # INDICES: [ range( # shingles ), corresponding index for each shingle in data ]
     # INDPTR: ?
 
-    characteristic_matrix = csr_matrix((data, indices, indptr), dtype=int).toarray().transpose()
+    characteristic_matrix = csr_matrix((data, indices, index_pointers), dtype=int).toarray().transpose()
     # First column, every hashed shingle, followed by 1 for columns containing that shingle and 0 otherwise
 
     signature_matrix = min_hash(characteristic_matrix, NUMBER_OF_HASHING_FUNCTIONS, a, b, p)
@@ -187,9 +183,7 @@ def implementation(document_subset, a, b, NUMBER_OF_HASHING_FUNCTIONS, p):
     return signature_matrix
 
 
-
 def plot_xy(y, x, z):
-
     plt.title("Elapsed time/document, average from 10 runs")
     plt.xlabel("Elapsed time (s)")
     plt.ylabel("Number of documents")
@@ -204,11 +198,21 @@ def plot_xy(y, x, z):
     return
 
 
+def print_similar_docs(similar_doc_pairs, document_paths, extra_string=""):
+    for pair in similar_doc_pairs:
+        path1 = document_paths[pair[0]]
+        path2 = document_paths[pair[1]]
+        print(f'Document {path1} is similar to {path2}   {extra_string}')
 
 
 def main():
-
-    #documents_raw = ['rävenraskaröverisen', 'nävenraskaröverisen', 'random', 'pandom', 'fävenraskaröverisen']
+    # --- Constants that can be tweaked --- #
+    DO_PERFORMANCE_TEST = False
+    NUMBER_OF_HASHING_FUNCTIONS = 100
+    BIG_PRIME = 4294967311  # this is the next prime >= Int32.
+    SIMILARITY_THRESHOLD = 0.8  # two documents are similar if their Jaccard similarity is at least s
+    SHINGLE_SIZE = 9  # the size of the k-shingles
+    # --- #
 
     document_paths = glob.glob("**/*.txt", recursive=True)
     documents_raw = []
@@ -219,83 +223,97 @@ def main():
         except UnicodeDecodeError:
             print(f'File with path {doc_path} could not be decoded correctly. Skipping...')
 
+    if len(documents_raw) < 2:
+        raise Exception("Failed to find at least two documents to process...")
 
-    NUMBER_OF_HASHING_FUNCTIONS = 100
-    p = 4294967311
-
-
-    ### similar pairs found with and without lsh, atleast t
+    # similar pairs of documents found with and without lsh
     sim_docs = []
     sim_docs_lsh = []
 
-    ### Used for plotting ###
+    # --- Used for plotting scalability of solution --- #
     elapsed_time = []
     elapsed_time_lsh = []
     num_docs = []
-    #########################
+    # --- #
 
-    for size in range(10, 20): # pairs to compare in an iteration, takes 3 min to run this loop
+    if DO_PERFORMANCE_TEST:
+        for size in range(1,
+                          min(20, len(documents_raw) + 1)):  # vary (increment) the size of the input dataset for every
+            print('Performance measuring implementation with an input size of', size, 'documents')
+            document_subset = documents_raw[:size]
+            average = []
+            average_lsh = []
 
-        document_subset = documents_raw[:size]
-        average = []
-        average_lsh = []
+            for iteration in range(10):  # to get average time from 10 runs on the same input dataset
+                t0 = time.perf_counter()
 
-        for iter in range(10): # to get average time from 10 runs to find sim pair with lsh and without lsh
+                a = [np.random.randint(1, BIG_PRIME // 2) for _ in
+                     range(NUMBER_OF_HASHING_FUNCTIONS)]  # random num from lower half of prime-range
+                # (to avoid overflows)
+                b = [np.random.randint(0, BIG_PRIME) for _ in
+                     range(NUMBER_OF_HASHING_FUNCTIONS)]  # rand num in prime-range
 
-            t0 = time.perf_counter()
+                signature_matrix = implementation(document_subset, SHINGLE_SIZE, a, b,
+                                                  NUMBER_OF_HASHING_FUNCTIONS, BIG_PRIME)
+                t1 = time.perf_counter()
 
-            a = [np.random.randint(1, p // 2) for _ in
-                 range(NUMBER_OF_HASHING_FUNCTIONS)]  # Random num from lower half of prime-range
-            b = [np.random.randint(0, p) for _ in range(NUMBER_OF_HASHING_FUNCTIONS)]  # Random num from prime-range
+                # --- Finding similar pairs without LSH --- #
+                check_pairs = itertools.combinations([doc_idx for doc_idx in range(0, size)], 2)
 
-            signature_matrix = implementation(document_subset, a, b, NUMBER_OF_HASHING_FUNCTIONS, p)
-            t1 = time.perf_counter()
+                sim_d = [f"SIZE: {size}"]
+                for pair in check_pairs:
+                    sim = compare_signatures(signature_matrix, pair[0], pair[1])
+                    if sim >= SIMILARITY_THRESHOLD:
+                        sim_d.append(pair)
 
+                t2 = time.perf_counter()
+                # --- #
 
-            check_pairs = itertools.combinations([doc_idx for doc_idx in range(0, size)], 2)
+                # --- Finding similar pairs with LSH --- #
+                # returns the candidate pairs where the fraction of components in which they agree is at least t.
+                candidate_pairs = LSH(signature_matrix, a[0], b[0], BIG_PRIME, SIMILARITY_THRESHOLD)
+                t3 = time.perf_counter()  # components
+                # --- #
 
-            sim_d = [f"SIZE: {size}"]
-            for pair in check_pairs:
-                sim = compare_signatures(signature_matrix, pair[0], pair[1])
-                if sim >= 0.8:
-                    sim_d.append(pair)
+                if iteration == 9:
+                    sim_docs.append(sim_d)
+                    sim_docs_lsh.append([f"SIZE: {size}", candidate_pairs])
 
+                average.append(t2 - t0)  # time to find sim docs without LSH (i.e. comparing every doc with every
+                # other in signature matrix)
 
-            t2 = time.perf_counter()
-            candidate_pairs = LSH(signature_matrix, a[0], b[0], p) # returns candidate pairs with atleast t similar
-            t3 = time.perf_counter()                               # components
+                average_lsh.append(t1 + t3 - t0 - t2)  # time to find sim docs with LSH
 
-            if iter == 9:
-                sim_docs.append(sim_d)
-                sim_docs_lsh.append([f"SIZE: {size}", candidate_pairs])
+            elapsed_time.append(np.mean(average))
+            elapsed_time_lsh.append(np.mean(average_lsh))
+            num_docs.append(size)
+    else:
+        a = [np.random.randint(1, BIG_PRIME // 2) for _ in
+             range(NUMBER_OF_HASHING_FUNCTIONS)]  # random num from lower half of prime-range (to avoid overflows)
+        b = [np.random.randint(0, BIG_PRIME) for _ in range(NUMBER_OF_HASHING_FUNCTIONS)]  # rand num in prime-range
+        signature_matrix = implementation(documents_raw, SHINGLE_SIZE, a, b,
+                                          NUMBER_OF_HASHING_FUNCTIONS, BIG_PRIME)
 
+        # --- Finding similar pairs without LSH --- #
+        check_pairs = itertools.combinations([doc_idx for doc_idx in range(0, len(documents_raw))], 2)
 
+        sim_d = []
+        for pair in check_pairs:
+            sim = compare_signatures(signature_matrix, pair[0], pair[1])
+            if sim >= SIMILARITY_THRESHOLD:
+                sim_d.append(pair)
+        # --- #
 
+        # --- Finding similar pairs with LSH --- #
+        # returns the candidate pairs where the fraction of components in which they agree is at least t.
+        candidate_pairs = LSH(signature_matrix, a[0], b[0], BIG_PRIME, SIMILARITY_THRESHOLD)
+        # --- #
 
-            average.append(t2-t0) # time to find sim docs without lsh (i.e. comparing every doc with every other in
-                                  # signature matrix)
+        sim_docs = sim_d
+        sim_docs_lsh = candidate_pairs
 
-            average_lsh.append(t1 + t3 - t0 - t2) # time to find sim docs with lsh
-
-        elapsed_time.append(np.mean(average)) 
-        elapsed_time_lsh.append(np.mean(average_lsh))
-        num_docs.append(size)
-
-
-    print(sim_docs)
-    print(sim_docs_lsh)
-    plot_xy(num_docs, elapsed_time, elapsed_time_lsh)
-
-    #candidate_pairs = LSH(signature_matrix, a[0], b[0], p)
-
-#    print('True similarity:', compare_sets(document_shingles[0], document_shingles[1]), 'Estimation:',
-#          compare_signatures(signature_matrix, 0, 1))
-#    print('True similarity:', compare_sets(document_shingles[0], document_shingles[2]), 'Estimation:',
-#          compare_signatures(signature_matrix, 0, 2))
-#    print('True similarity:', compare_sets(document_shingles[1], document_shingles[2]), 'Estimation:',
-#          compare_signatures(signature_matrix, 1, 2))
-
-    #print(candidate_pairs)
+    print_similar_docs(sim_docs, document_paths, "- When not using LSH")
+    print_similar_docs(sim_docs_lsh, document_paths, "- According to LSH")
 
 
 if __name__ == '__main__':
