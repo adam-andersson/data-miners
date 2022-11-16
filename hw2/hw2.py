@@ -103,7 +103,7 @@ def second_pass(dataset, frequent_items, L_k, k, num_basket, threshold=0.01): # 
         candidates = [i for i in freq if investigate[i] >= k] # Filter on items meeting criteria
                                                                            # of appearing k times
 
-        if len(candidates) >= k+1: # no candidate itemsets of size k can be created if this criteria is not met
+        if len(candidates) >= k+1: # no candidate itemsets of size k+1 can be created if this criteria is not met
             candidates = list(itertools.combinations(candidates, k+1)) # create candidate k+1-itemsets
             count += candidates
 
