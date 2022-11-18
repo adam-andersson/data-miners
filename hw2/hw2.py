@@ -128,7 +128,7 @@ def second_pass(dataset, frequent_items, L_k, k, num_basket, threshold=0.01): # 
 
 
 
-data = read_data("../edward/T10I4D100K.dat")
+data = read_data("T10I4D100K.dat")
 #data = read_data("test.txt")
 
 occ, number_of_baskets = first_pass(data)
@@ -141,5 +141,7 @@ print("Number of pairs in L2: ", len(L2), "\n L2: ", L2, "\n")
 #
 
 L3 = second_pass(data, freq, L2, 2, number_of_baskets, 0.01) # 0.5 threshold for test.txt
+
+print("Number of triples in L3: ", len(L3), "\n L3: ", L3)
 
 print("Number of triples in L3: ", len(L3), "\n L3: ", L3)
