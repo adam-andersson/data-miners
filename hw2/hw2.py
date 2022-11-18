@@ -15,12 +15,15 @@ def read_data(file):
     dataset = []
 
     for line in file:
-        line = set(line.split(" "))
-        basket = set()
+        line = line.split(" ")
+        basket = []
 
         for item in line:
             try:
-                basket.add(int(item))
+                if int(item) in basket:
+                    pass
+                else:
+                    basket.append(int(item))
             except:
                 pass
 
@@ -62,14 +65,14 @@ def first_pass(dataset): # C_1
 
 def frequent(occurences, num_baskets, threshold=0.01): # used for L1 to find frequent pairs
 
-    m = 1
+
     L1 = []
     frequent_items = []
-    for item_set in occurences:
-        if item_set / num_baskets >= threshold:
-            frequent_items.append(m)
-            L1.append((m,))
-            m += 1
+    for index, item in enumerate(occurences):
+        if item / num_baskets >= threshold:
+            frequent_items.append(index)
+            L1.append((index,))
+
         else:
             frequent_items.append(0)
 
@@ -81,9 +84,10 @@ def second_pass(dataset, frequent_items, L_k, k, num_basket, threshold=0.01): # 
 
     support = {}
     count = []
-    L_kplus1 = []
+    L_kplus1 = set()
+    f = []
 
-
+    p = 0
     for basket in dataset:
         investigate = {}
         for item in basket:
@@ -92,6 +96,7 @@ def second_pass(dataset, frequent_items, L_k, k, num_basket, threshold=0.01): # 
 
         freq = list(investigate.keys())   # frequent items found in basket
         freq_k = list(itertools.combinations(freq, k)) # create all k-itemsets out of the frequent items
+
 
         for itemset_k in freq_k:            # iterate over itemsets consisting of k items in basket
             if itemset_k in L_k:            # check if itemset is frequent by looking it up in L_k
@@ -102,6 +107,7 @@ def second_pass(dataset, frequent_items, L_k, k, num_basket, threshold=0.01): # 
 
         candidates = [i for i in freq if investigate[i] >= k] # Filter on items meeting criteria
                                                                            # of appearing k times
+
 
         if len(candidates) >= k+1: # no candidate itemsets of size k+1 can be created if this criteria is not met
             candidates = list(itertools.combinations(candidates, k+1)) # create candidate k+1-itemsets
@@ -114,39 +120,26 @@ def second_pass(dataset, frequent_items, L_k, k, num_basket, threshold=0.01): # 
             support[candidate] = 1 / num_basket
 
         if support[candidate] >= threshold:
-            L_kplus1.append(candidate)
+            L_kplus1.add(candidate)
 
-    return set(L_kplus1)
+    return list(L_kplus1)
 
 
 
-#data = read_data("T10I4D100K.dat")
-data = read_data("test.txt")
+
+
+data = read_data("../edward/T10I4D100K.dat")
+#data = read_data("test.txt")
 
 occ, number_of_baskets = first_pass(data)
 
-freq, L1 = frequent(occ, number_of_baskets, 0.5) # 0.5 threshold for test.txt
+freq, L1 = frequent(occ, number_of_baskets, 0.01) # 0.5 threshold for test.txt
 
-L2 = second_pass(data, freq, L1, 1, number_of_baskets)
 
-print(L2)
-
-#L2_atm = [(19, 306), (89, 139), (249, 132), (139, 265), (88, 122), (257, 306), (257, 19)]
-#print("L2: ", L2_atm)
-
-L3 = second_pass(data, freq, list(L2), 2, number_of_baskets, 0.5) # 0.5 threshold for test.txt
+L2 = second_pass(data, freq, L1, 1, number_of_baskets, 0.01)
+print("Number of pairs in L2: ", len(L2), "\n L2: ", L2, "\n")
 #
-print(L3)
 
-# test.txt
-#1 2 3 5
-#1 2 3 5
-#1 2 3 8 9 10
-#1 2 3 4
-#1 2 3 11 14 16
-#1 2 3 4
-#1 9 7 4
-#1 5 0 3
+L3 = second_pass(data, freq, L2, 2, number_of_baskets, 0.01) # 0.5 threshold for test.txt
 
-
-
+print("Number of triples in L3: ", len(L3), "\n L3: ", L3)
