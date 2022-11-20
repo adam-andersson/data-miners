@@ -1,3 +1,4 @@
+import argparse
 import itertools
 import time
 
@@ -132,21 +133,55 @@ def a_priori_second_pass(list_of_baskets, frequent_items, L_k, k, num_basket, th
     return next_L
 
 
-def calculate_association_confidence(item_set, arrow_position, item_set_support_lookup):
-    a_set = item_set[:arrow_position]
-    sorted_a_set = tuple(sorted(a_set))
-    sorted_item_set = tuple(sorted(item_set))
-    union_support = item_set_support_lookup[sorted_item_set]
-    a_support = item_set_support_lookup[sorted_a_set]
-    return union_support / a_support
+def calculate_association_confidence(union_set, arrow_position, item_set_support_lookup):
+    """
+    Finds the confidence level of an association rule by looking up support for subsets.
+    :param union_set: an item-set tuple, e.g., (A, ) or (A, B) or (A, B, C)
+    :param arrow_position: an integer that denotes where the item-set tuple is split into two subsets, i.e.,
+    (1) item_set = (A, B, C) and arrow_position = 1 would mean we are investigating the rule (A, ) -> (B, C)
+    (2) item_set = (A, B, C) and arrow_position = 2 would mean we are investigating the rule (A, B) -> (C)
+    :param item_set_support_lookup: a dictionary to lookup the support for any frequent item-set tuple. The key of the
+    dictionary items is the tuple, e.g., (A, ) or (A, B) and the value at that key is the support for that item-set.
+    :return: a float, the ratio between the support for the union item-set to the support for the first set in the rule.
+    """
+    first_set = union_set[:arrow_position]  # the item-set to the left of the arrow in the association rule
+
+    # sort the first item-set and the union item-set to be able to lookup in the dictionary
+    first_set_sorted = tuple(sorted(first_set))
+    first_set_support = item_set_support_lookup[first_set_sorted]
+
+    union_set_sorted = tuple(sorted(union_set))
+    union_set_support = item_set_support_lookup[union_set_sorted]
+
+    return union_set_support / first_set_support
 
 
 def main():
-    # --- Constants that can be tweaked --- #
-    DATASET_FILEPATH = "T10I4D100K.dat"
-    S_THRESHOLD = 0.01
-    MAX_I = 10  # Used to limit run-time when running w/ high support threshold
-    CONFIDENCE = 0.5
+    # --- Expose command line arguments --- #
+    parser = argparse.ArgumentParser(
+        prog='Frequent Item-sets Finder',
+        description='Finds frequent item-sets and association rules using A-priori algorithm.',
+    )
+
+    parser.add_argument('-p', '--path', type=str, default='T10I4D100K.dat',
+                        help='Specify the path to the transaction data set to be used.')
+
+    parser.add_argument('-s', '--support', type=float, default=0.01, metavar='f',
+                        help='The support for I is the number of baskets for which I is a subset.'
+                             'Should be a float between 0 and 1.')
+
+    parser.add_argument('-c', '--confidence', type=float, default=0.5, metavar='f',
+                        help='The confidence of the rule is the fraction of the baskets with all of I that '
+                             'also contain j. Should be a float between 0 and 1.')
+
+    args = parser.parse_args()
+
+    # Update the constants to the values of the args or default values
+    DATASET_FILEPATH = args.path
+    S_THRESHOLD = args.support
+    CONFIDENCE = args.confidence
+
+    print(f'Using a support threshold of {S_THRESHOLD} and a confidence level of {CONFIDENCE}')
     # --- #
 
     # --- Setup and first pass --- #
@@ -165,24 +200,25 @@ def main():
     all_frequent_items = []
 
     L_i = L_1
-    for i in range(2, MAX_I + 1):
+    i = 2
+    while len(L_i) > 0:
         all_frequent_items.append(L_i)
         L_i = a_priori_second_pass(baskets, frequent_items_table, L_i, i - 1, number_of_baskets, S_THRESHOLD)
 
-        if len(L_i) == 0:
-            print(f'Found no frequent items of length {i} \n')
-            break
-        else:
+        if len(L_i) > 0:
             print(f'Found {len(L_i)} frequent item-sets with length {i} \n'
                   f'{L_i} \n')
+            i += 1
+
+    print(f'Found no frequent items of length {i} \n')
     # --- #
 
     # --- Finding association rules --- #
     item_set_support_lookup = {}
-    for frequent_item_k in all_frequent_items:
+    for frequent_item_k in all_frequent_items:  # iterate over L_1, L_2, ..., L_i's frequent item-sets
         for frequent_item in frequent_item_k:
-            item, supp = frequent_item[0], frequent_item[1]
-            item_set_support_lookup[item] = supp
+            item, support_for_item = frequent_item[0], frequent_item[1]
+            item_set_support_lookup[item] = support_for_item
 
     found_associations = {}
 
@@ -190,34 +226,36 @@ def main():
     frequent_item_sets = [item_sets[0] for item_sets_of_len_k in all_frequent_items[1:]
                           for item_sets in item_sets_of_len_k]
 
-    for frequent_item_set in frequent_item_sets:
-        item_set_permutations = itertools.permutations(frequent_item_set, len(frequent_item_set))
+    for freq_item_set in frequent_item_sets:
+        # permute the item-set to create all possible fragmented sets of the item-set.
+        item_set_permutations = itertools.permutations(freq_item_set, len(freq_item_set))
         for permutation in item_set_permutations:
             # Start with the arrow as far "to the right" as possible to make the left subset as large as possible,
             # since this would mean not having to continue the loop if we found that this subset is not confident.
             for arrow_pos in range(len(permutation) - 1, 0, -1):
                 association_confidence = calculate_association_confidence(permutation, arrow_pos,
                                                                           item_set_support_lookup)
-                if association_confidence >= CONFIDENCE:
+                if association_confidence >= CONFIDENCE or association_confidence <= -CONFIDENCE:
                     association_key = str(str(sorted(permutation[:arrow_pos])) + '$' +
                                           str(sorted(permutation[arrow_pos:])))
-
+                    # do not add duplicate assoc rules, e.g., {A, B} -> {C} == {B, A} -> {C}, thus only add it once
                     if association_key not in found_associations:
                         found_associations[association_key] = association_confidence
                 else:
                     # If {K,L,M} -> {N} is below confidence, so is {K,L} -> {M,N}
                     break
 
-    for key, value in found_associations.items():
-        cleaned_key = key.replace('[', ' ').replace(']', ' ')
-        set1, set2 = cleaned_key.split('$')
-        print(f'Found association [Confidence {round(value, 3)}]: '
+    for assoc_rule, assoc_conf in found_associations.items():
+        # the association rule is on the form: [A, B]$[C], do some cleaning to prettify the prints
+        cleaned_rule = assoc_rule.replace('[', ' ').replace(']', ' ')
+        set1, set2 = cleaned_rule.split('$')
+        print(f'Found association [Confidence {round(assoc_conf, 3)}]: '
               f'{{{set1}}} -> {{{set2}}}')
     # --- #
 
     # --- Calculating run time --- #
     end_time = time.perf_counter()
-    print(f'\n--- Execution Time: {round(end_time-starting_time, 3)}sec ---')
+    print(f'\n--- Execution Time: {round(end_time-starting_time, 3)} seconds ---')
 
 
 if __name__ == '__main__':
