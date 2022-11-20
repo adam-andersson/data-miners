@@ -240,14 +240,8 @@ def main():
                 # If we have already checked the association of this partition, this could be the case when partitions
                 # are permutations of each other, e.g., {1} → {3, 2} == {1} → {2, 3}
                 if association_key in checked_associations:
-                    if association_key in confident_associations:
-                        # move the arrow position to the next position since we have already checked this rule
-                        continue  # go to next iteration of arrow_pos loop
-                    else:
-                        # if we have already checked this rule, and it did not meet the confidence level
-                        # then we can be sure that no other partition of this permutation can meet the confidence level.
-                        # (If {K,L,M} -> {N} is below confidence, so is {K,L} -> {M,N})
-                        break  # end the arrow_pos loop
+                    # move the arrow position to the next position since we have already checked this rule
+                    continue  # go to next iteration of arrow_pos loop
 
                 checked_associations.add(association_key)
                 association_confidence = calculate_association_confidence(permutation, arrow_pos,
