@@ -220,32 +220,45 @@ def main():
             item, support_for_item = frequent_item[0], frequent_item[1]
             item_set_support_lookup[item] = support_for_item
 
-    found_associations = {}
+    confident_associations = {}
+    checked_associations = set()
 
     # flatten all item-sets and filter on item-sets of length >= 2
     frequent_item_sets = [item_sets[0] for item_sets_of_len_k in all_frequent_items[1:]
                           for item_sets in item_sets_of_len_k]
 
     for freq_item_set in frequent_item_sets:
-        # permute the item-set to create all possible fragmented sets of the item-set.
+        # permute the item-set to create all possible partitioned sets of the item-set.
         item_set_permutations = itertools.permutations(freq_item_set, len(freq_item_set))
         for permutation in item_set_permutations:
             # Start with the arrow as far "to the right" as possible to make the left subset as large as possible,
             # since this would mean not having to continue the loop if we found that this subset is not confident.
             for arrow_pos in range(len(permutation) - 1, 0, -1):
+                association_key = str(str(sorted(permutation[:arrow_pos])) + '$' +
+                                      str(sorted(permutation[arrow_pos:])))
+
+                # If we have already checked the association of this partition, this could be the case when partitions
+                # are permutations of each other, e.g., {1} → {3, 2} == {1} → {2, 3}
+                if association_key in checked_associations:
+                    if association_key in confident_associations:
+                        # move the arrow position to the next position since we have already checked this rule
+                        continue  # go to next iteration of arrow_pos loop
+                    else:
+                        # if we have already checked this rule, and it did not meet the confidence level
+                        # then we can be sure that no other partition of this permutation can meet the confidence level.
+                        # (If {K,L,M} -> {N} is below confidence, so is {K,L} -> {M,N})
+                        break  # end the arrow_pos loop
+
+                checked_associations.add(association_key)
                 association_confidence = calculate_association_confidence(permutation, arrow_pos,
                                                                           item_set_support_lookup)
                 if association_confidence >= CONFIDENCE:
-                    association_key = str(str(sorted(permutation[:arrow_pos])) + '$' +
-                                          str(sorted(permutation[arrow_pos:])))
-                    # do not add duplicate assoc rules, e.g., {A, B} -> {C} == {B, A} -> {C}, thus only add it once
-                    if association_key not in found_associations:
-                        found_associations[association_key] = association_confidence
+                    confident_associations[association_key] = association_confidence
                 else:
                     # If {K,L,M} -> {N} is below confidence, so is {K,L} -> {M,N}
                     break
 
-    for assoc_rule, assoc_conf in found_associations.items():
+    for assoc_rule, assoc_conf in confident_associations.items():
         # the association rule is on the form: [A, B]$[C], do some cleaning to prettify the prints
         cleaned_rule = assoc_rule.replace('[', '').replace(']', '')
         set1, set2 = cleaned_rule.split('$')
@@ -256,8 +269,6 @@ def main():
 
         print(f'Found association [Confidence {round(assoc_conf, 3)}] [Interest {round(assoc_interest, 3)}]: '
               f'{{{ set1 }}} -> {{{ set2 }}}')
-
-
     # --- #
 
     # --- Calculating run time --- #
@@ -267,5 +278,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
