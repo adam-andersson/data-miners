@@ -181,7 +181,7 @@ def main():
     S_THRESHOLD = args.support
     CONFIDENCE = args.confidence
 
-    print(f'Using a support threshold of {S_THRESHOLD} and a confidence level of {CONFIDENCE}')
+    print(f'Using a support threshold of {S_THRESHOLD} and a confidence level of {CONFIDENCE} \n')
     # --- #
 
     # --- Setup and first pass --- #
@@ -247,10 +247,17 @@ def main():
 
     for assoc_rule, assoc_conf in found_associations.items():
         # the association rule is on the form: [A, B]$[C], do some cleaning to prettify the prints
-        cleaned_rule = assoc_rule.replace('[', ' ').replace(']', ' ')
+        cleaned_rule = assoc_rule.replace('[', '').replace(']', '')
         set1, set2 = cleaned_rule.split('$')
-        print(f'Found association [Confidence {round(assoc_conf, 3)}]: '
-              f'{{{set1}}} -> {{{set2}}}')
+
+        # convert back key to a tuple to lookup it's support
+        set2_tuple = tuple(map(int, set2.split(', ')))
+        assoc_interest = assoc_conf - item_set_support_lookup[set2_tuple]
+
+        print(f'Found association [Confidence {round(assoc_conf, 3)}] [Interest {round(assoc_interest, 3)}]: '
+              f'{{{ set1 }}} -> {{{ set2 }}}')
+
+
     # --- #
 
     # --- Calculating run time --- #
