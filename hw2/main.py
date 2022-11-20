@@ -235,7 +235,7 @@ def main():
             for arrow_pos in range(len(permutation) - 1, 0, -1):
                 association_confidence = calculate_association_confidence(permutation, arrow_pos,
                                                                           item_set_support_lookup)
-                if association_confidence >= CONFIDENCE or association_confidence <= -CONFIDENCE:
+                if association_confidence >= CONFIDENCE:
                     association_key = str(str(sorted(permutation[:arrow_pos])) + '$' +
                                           str(sorted(permutation[arrow_pos:])))
                     # do not add duplicate assoc rules, e.g., {A, B} -> {C} == {B, A} -> {C}, thus only add it once
