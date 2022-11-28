@@ -133,10 +133,11 @@ if __name__ == "__main__":
     CORRECT_NO_TRIANGLES = 11329473
     # --- #
 
-    multiple_set_size = [1000, 5000]
+    multiple_set_size = [1000, 4000, 7000, 10000, 13000, 16000, 20000]
     results = []
 
-    for M in multiple_set_size:
+    for i in range(10):
+        M = MAX_SET_SIZE
         seen_edges = set()
         if USE_IMPROVED:
             triest = TriestImpr(M)
@@ -158,8 +159,16 @@ if __name__ == "__main__":
                     seen_edges.add(edge_tuple)
         global_triangles = triest.estimate_global_triangles()
         print(f'In total, we found {int(global_triangles)} triangles')
-        results.append(global_triangles)
+        results.append(int(global_triangles))
 
-    plt.plot(multiple_set_size, results)
-    plt.plot(y=CORRECT_NO_TRIANGLES)
-    plt.show()
+    print(results)
+    print(sum(results) / len(results))
+    print(max(results), min(results))
+
+    # plt.plot(multiple_set_size, results, marker='o', label='TriestBase')
+    # plt.axhline(y=CORRECT_NO_TRIANGLES, color='r', label='True Triangle Count')
+    # plt.title('TriestBase')
+    # plt.xlabel('Maximum set size, M')
+    # plt.ylabel('Global triangles count')
+    # plt.legend(loc='upper left')
+    # plt.show()
