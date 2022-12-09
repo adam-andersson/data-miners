@@ -50,10 +50,13 @@ public class Jabeja {
    */
   private void saCoolDown(){
     // TODO for second task
-    if (T > 1)
+
+/*    if (T > 1)
       T -= config.getDelta();
     if (T < 1)
-      T = 1;
+      T = 1;*/
+
+    T = Math.max(T * config.getDelta(), 0.0001f);
   }
 
   /**
@@ -102,20 +105,27 @@ public class Jabeja {
       double d_p_p = getDegree(nodep, nodep.getColor());
       double d_q_q = getDegree(nodeq, nodeq.getColor());
 
-      double old_deg = d_p_p + d_q_q;
+      double old_deg = Math.pow(d_p_p, config.getAlpha()) + Math.pow(d_q_q, config.getAlpha());
 
       double d_p_q = getDegree(nodep, nodeq.getColor());
       double d_q_p = getDegree(nodeq, nodep.getColor());
 
-      double new_deg = d_p_q + d_q_p;
+      double new_deg = Math.pow(d_p_q, config.getAlpha()) + Math.pow(d_q_p, config.getAlpha());
 
-      if (new_deg * T > old_deg && new_deg > highestBenefit) {
+      //if (new_deg * T > old_deg && new_deg > highestBenefit)
+
+      double ap = acceptanceProbability(old_deg, new_deg);
+      if (ap > Math.random() && new_deg > highestBenefit) {
         bestPartner = nodeq;
         highestBenefit = new_deg;
       }
     }
 
     return bestPartner;
+  }
+
+  private double acceptanceProbability(double oldCost, double newCost) {
+    return Math.exp((newCost - oldCost) / T);
   }
 
   /**
