@@ -13,6 +13,7 @@ public class Config {
   private GraphInitColorPolicy initColorPolicy;
   private NodeSelectionPolicy nodeSelectionPolicy;
   private AnnealingPolicy annealingPolicy;
+  private Integer numberForTemperatureReset;
   private Float alpha;
 
   public Config setAlpha(Float alpha) {
@@ -37,6 +38,11 @@ public class Config {
 
   public Config setAnnealingPolicy(AnnealingPolicy annealingPolicy) {
     this.annealingPolicy = annealingPolicy;
+    return this;
+  }
+
+  public Config setNumberForTemperatureReset(Integer numberForTemperatureReset) {
+    this.numberForTemperatureReset = numberForTemperatureReset;
     return this;
   }
 
@@ -155,6 +161,13 @@ public class Config {
       throw new NullPointerException("Annealing policy is not defined.");
     }
     return annealingPolicy;
+  }
+
+  public Integer getNumberForTemperatureReset() {
+    if (numberForTemperatureReset == null) {
+      throw new NullPointerException("Number for temperature restart is not defined");
+    }
+    return numberForTemperatureReset;
   }
 
   public String getOutputDir() {

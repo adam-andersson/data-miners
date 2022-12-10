@@ -56,6 +56,9 @@ public class CLI {
   private String ANNEALING_POLICY = "LINEAR";
   private AnnealingPolicy annealingPolicy = AnnealingPolicy.LINEAR;
 
+  @Option(name = "-restartAfter", usage = "Temperate is reset after k similar edge cuts in a row, Supported: Integer")
+  private int numberForTemperatureReset = 0;
+
   @Option(name = "-graph", usage = "Location of the input graph.")
   private static String GRAPH = "./graphs/ws-250.graph";
 
@@ -123,6 +126,7 @@ public class CLI {
             .setNodeSelectionPolicy(nodeSelectionPolicy)
             .setGraphInitialColorPolicy(graphInitColorSelectionPolicy)
             .setAnnealingPolicy(annealingPolicy)
+            .setNumberForTemperatureReset(numberForTemperatureReset)
             .setOutputDir(OUTPUT_DIR)
             .setAlpha(ALPHA);
   }

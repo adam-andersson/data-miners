@@ -21,6 +21,8 @@ public class Jabeja {
   private float T;
   private float TMin;
   private boolean resultFileCreated = false;
+  private int lastSeenNumberOfEdgeCuts;
+  private int lastSeenAmountOfTimes;
 
   //-------------------------------------------------------------------
   public Jabeja(HashMap<Integer, Node> graph, Config config) {
@@ -47,8 +49,25 @@ public class Jabeja {
       //one cycle for all nodes have completed.
       //reduce the temperature
       saCoolDown();
-      report();
-      if ()
+
+      int lastEdgeCut = report();
+      if (config.getNumberForTemperatureReset() > 1) {
+        updateAndPotentiallyResetTemperature(lastEdgeCut);
+      }
+    }
+  }
+
+  private void updateAndPotentiallyResetTemperature(int lastEdgeCut) {
+    if (lastSeenNumberOfEdgeCuts == lastEdgeCut) {
+      lastSeenAmountOfTimes++;
+
+      if (lastSeenAmountOfTimes >= config.getNumberForTemperatureReset()) {
+        T = config.getTemperature();
+        System.out.println("Temperature was reset!");
+      }
+    } else {
+      lastSeenNumberOfEdgeCuts = lastEdgeCut;
+      lastSeenAmountOfTimes = 1;
     }
   }
 
@@ -225,7 +244,7 @@ public class Jabeja {
    *
    * @throws IOException
    */
-  private void report() throws IOException {
+  private int report() throws IOException {
     int grayLinks = 0;
     int migrations = 0; // number of nodes that have changed the initial color
     int size = entireGraph.size();
@@ -259,6 +278,7 @@ public class Jabeja {
             ", temperature: " + T);
 
     saveToFile(edgeCut, migrations);
+    return edgeCut;
   }
 
   private void saveToFile(int edgeCuts, int migrations) throws IOException {
