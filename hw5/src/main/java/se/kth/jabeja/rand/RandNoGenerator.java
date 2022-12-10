@@ -23,5 +23,8 @@ public class RandNoGenerator {
         return rand.nextInt(number);
     }
 
+    public static float randomFloat() {
+        return rand.nextFloat();
+    }
 
 }

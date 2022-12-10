@@ -19,6 +19,7 @@ public class Jabeja {
   private int numberOfSwaps;
   private int round;
   private float T;
+  private float TMin;
   private boolean resultFileCreated = false;
 
   //-------------------------------------------------------------------
@@ -29,6 +30,7 @@ public class Jabeja {
     this.numberOfSwaps = 0;
     this.config = config;
     this.T = config.getTemperature();
+    this.TMin = 0.00001f;
   }
 
 
@@ -46,6 +48,7 @@ public class Jabeja {
       //reduce the temperature
       saCoolDown();
       report();
+      if ()
     }
   }
 
@@ -54,14 +57,9 @@ public class Jabeja {
    */
   private void saCoolDown(){
     if (config.getAnnealingPolicy() == AnnealingPolicy.LINEAR) {
-      if (T > 1)
-        T -= config.getDelta();
-      if (T < 1)
-        T = 1;
+      T = Math.max(T - config.getDelta(), 1);
     } else if (config.getAnnealingPolicy() == AnnealingPolicy.EXPONENTIAL) {
-      T = Math.max(T * config.getDelta(), 0.0001f);
-    } else {
-      System.out.println("Policy is invalid!!");
+      T = Math.max(T * (1 - config.getDelta()), TMin);
     }
   }
 
@@ -121,10 +119,12 @@ public class Jabeja {
       double new_deg = Math.pow(d_p_q, config.getAlpha()) + Math.pow(d_q_p, config.getAlpha());
 
       boolean isApprovedSwap = false;
-      if (config.getAnnealingPolicy() == AnnealingPolicy.LINEAR && new_deg * T > old_deg) {
+      if (config.getAnnealingPolicy() == AnnealingPolicy.LINEAR
+              && new_deg * T > old_deg) {
         isApprovedSwap = true;
       } else if (config.getAnnealingPolicy() == AnnealingPolicy.EXPONENTIAL
-              && acceptanceProbability(old_deg, new_deg) > Math.random()) {
+              && new_deg != old_deg
+              && acceptanceProbability(old_deg, new_deg) > RandNoGenerator.randomFloat()) {
         isApprovedSwap = true;
       }
 
@@ -255,7 +255,8 @@ public class Jabeja {
     logger.info("round: " + round +
             ", edge cut:" + edgeCut +
             ", swaps: " + numberOfSwaps +
-            ", migrations: " + migrations);
+            ", migrations: " + migrations +
+            ", temperature: " + T);
 
     saveToFile(edgeCut, migrations);
   }
