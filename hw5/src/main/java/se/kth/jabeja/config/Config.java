@@ -12,6 +12,7 @@ public class Config {
   private String outputDir;
   private GraphInitColorPolicy initColorPolicy;
   private NodeSelectionPolicy nodeSelectionPolicy;
+  private AnnealingPolicy annealingPolicy;
   private Float alpha;
 
   public Config setAlpha(Float alpha) {
@@ -31,6 +32,11 @@ public class Config {
 
   public Config setNodeSelectionPolicy(NodeSelectionPolicy nodeSelectionPolicy) {
     this.nodeSelectionPolicy = nodeSelectionPolicy;
+    return this;
+  }
+
+  public Config setAnnealingPolicy(AnnealingPolicy annealingPolicy) {
+    this.annealingPolicy = annealingPolicy;
     return this;
   }
 
@@ -142,6 +148,13 @@ public class Config {
       throw new NullPointerException("Node selection policy is not defined.");
     }
     return nodeSelectionPolicy;
+  }
+
+  public AnnealingPolicy getAnnealingPolicy() {
+    if (annealingPolicy == null) {
+      throw new NullPointerException("Annealing policy is not defined.");
+    }
+    return annealingPolicy;
   }
 
   public String getOutputDir() {

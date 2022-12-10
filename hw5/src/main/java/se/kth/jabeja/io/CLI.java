@@ -3,6 +3,7 @@ package se.kth.jabeja.io;
 import org.apache.log4j.Logger;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
+import se.kth.jabeja.config.AnnealingPolicy;
 import se.kth.jabeja.config.Config;
 import se.kth.jabeja.config.GraphInitColorPolicy;
 import se.kth.jabeja.config.NodeSelectionPolicy;
@@ -51,6 +52,10 @@ public class CLI {
   private String NODE_SELECTION_POLICY = "HYBRID";
   private NodeSelectionPolicy nodeSelectionPolicy = NodeSelectionPolicy.HYBRID;
 
+  @Option(name = "-annealingPolicy", usage = "Annealing policy, Supported: LINEAR, EXPONENTIAL")
+  private String ANNEALING_POLICY = "LINEAR";
+  private AnnealingPolicy annealingPolicy = AnnealingPolicy.LINEAR;
+
   @Option(name = "-graph", usage = "Location of the input graph.")
   private static String GRAPH = "./graphs/ws-250.graph";
 
@@ -83,6 +88,14 @@ public class CLI {
         throw new IllegalArgumentException("Node selection policy is not supported");
       }
 
+      if (ANNEALING_POLICY.compareToIgnoreCase(AnnealingPolicy.LINEAR.toString()) == 0) {
+        annealingPolicy = AnnealingPolicy.LINEAR;
+      } else if (ANNEALING_POLICY.compareToIgnoreCase(AnnealingPolicy.EXPONENTIAL.toString()) == 0) {
+        annealingPolicy = AnnealingPolicy.EXPONENTIAL;
+      } else {
+        throw new IllegalArgumentException("Annealing policy is not supported");
+      }
+
     } catch (Exception e) {
       logger.error(e.getMessage());
       parser.printUsage(System.err);
@@ -109,6 +122,7 @@ public class CLI {
             .setGraphFilePath(GRAPH)
             .setNodeSelectionPolicy(nodeSelectionPolicy)
             .setGraphInitialColorPolicy(graphInitColorSelectionPolicy)
+            .setAnnealingPolicy(annealingPolicy)
             .setOutputDir(OUTPUT_DIR)
             .setAlpha(ALPHA);
   }

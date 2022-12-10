@@ -1,6 +1,7 @@
 package se.kth.jabeja;
 
 import org.apache.log4j.Logger;
+import se.kth.jabeja.config.AnnealingPolicy;
 import se.kth.jabeja.config.Config;
 import se.kth.jabeja.config.NodeSelectionPolicy;
 import se.kth.jabeja.io.FileIO;
@@ -33,6 +34,9 @@ public class Jabeja {
 
   //-------------------------------------------------------------------
   public void startJabeja() throws IOException {
+
+    System.out.println(config.getAnnealingPolicy() + " - Annealing Policy");
+
     for (round = 0; round < config.getRounds(); round++) {
       for (int id : entireGraph.keySet()) {
         sampleAndSwap(id);
@@ -46,17 +50,19 @@ public class Jabeja {
   }
 
   /**
-   * Simulated analealing cooling function
+   * Simulated annealing cooling function
    */
   private void saCoolDown(){
-    // TODO for second task
-
-/*    if (T > 1)
-      T -= config.getDelta();
-    if (T < 1)
-      T = 1;*/
-
-    T = Math.max(T * config.getDelta(), 0.0001f);
+    if (config.getAnnealingPolicy() == AnnealingPolicy.LINEAR) {
+      if (T > 1)
+        T -= config.getDelta();
+      if (T < 1)
+        T = 1;
+    } else if (config.getAnnealingPolicy() == AnnealingPolicy.EXPONENTIAL) {
+      T = Math.max(T * config.getDelta(), 0.0001f);
+    } else {
+      System.out.println("Policy is invalid!!");
+    }
   }
 
   /**
@@ -76,7 +82,9 @@ public class Jabeja {
     if (config.getNodeSelectionPolicy() == NodeSelectionPolicy.HYBRID
             || config.getNodeSelectionPolicy() == NodeSelectionPolicy.RANDOM) {
       // if local policy fails then randomly sample the entire graph
-      partner = findPartner(nodeId, getSample(nodeId));
+      if (partner == null) {
+        partner = findPartner(nodeId, getSample(nodeId));
+      }
     }
 
     // swap the colors
@@ -112,10 +120,15 @@ public class Jabeja {
 
       double new_deg = Math.pow(d_p_q, config.getAlpha()) + Math.pow(d_q_p, config.getAlpha());
 
-      //if (new_deg * T > old_deg && new_deg > highestBenefit)
+      boolean isApprovedSwap = false;
+      if (config.getAnnealingPolicy() == AnnealingPolicy.LINEAR && new_deg * T > old_deg) {
+        isApprovedSwap = true;
+      } else if (config.getAnnealingPolicy() == AnnealingPolicy.EXPONENTIAL
+              && acceptanceProbability(old_deg, new_deg) > Math.random()) {
+        isApprovedSwap = true;
+      }
 
-      double ap = acceptanceProbability(old_deg, new_deg);
-      if (ap > Math.random() && new_deg > highestBenefit) {
+      if (isApprovedSwap && new_deg > highestBenefit) {
         bestPartner = nodeq;
         highestBenefit = new_deg;
       }
